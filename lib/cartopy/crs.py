@@ -37,6 +37,9 @@ import cartopy.trace
 __document_these__ = ['CRS', 'Geocentric', 'Geodetic', 'Globe']
 
 
+PRECISION = 2000.0
+
+
 class RotatedGeodetic(CRS):
     """
     Defines a rotated latitude/longitude coordinate system with spherical
@@ -91,16 +94,18 @@ class Projection(CRS):
         pass
 
     @abstractproperty
-    def threshold(self):
-        pass
-
-    @abstractproperty
     def x_limits(self):
         pass
 
     @abstractproperty
     def y_limits(self):
         pass
+
+    @property
+    def threshold(self):
+        x0, x1 = self.x_limits
+        y0, y1 = self.y_limits
+        return min(abs(x1-x0), abs(y1-y0)) / PRECISION
 
     @property
     def cw_boundary(self):
@@ -552,14 +557,8 @@ class PlateCarree(_CylindricalProjection):
             globe = Globe(semimajor_axis=math.degrees(1))
         x_max = math.radians(globe.semimajor_axis or 6378137.0) * 180
         y_max = math.radians(globe.semimajor_axis or 6378137.0) * 90
-        # Set the threshold around 0.5 if the x max is 180.
-        self._threshold = x_max / 360.
         super(PlateCarree, self).__init__(proj4_params, x_max, y_max,
                                           globe=globe)
-
-    @property
-    def threshold(self):
-        return self._threshold
 
     def _bbox_and_offset(self, other_plate_carree):
         """
@@ -675,10 +674,6 @@ class TransverseMercator(Projection):
         super(TransverseMercator, self).__init__(proj4_params, globe=globe)
 
     @property
-    def threshold(self):
-        return 1e4
-
-    @property
     def boundary(self):
         x0, x1 = self.x_limits
         y0, y1 = self.y_limits
@@ -778,10 +773,6 @@ class UTM(Projection):
                                  (x0, y0)])
 
     @property
-    def threshold(self):
-        return 1e2
-
-    @property
     def x_limits(self):
         easting = 5e5
         # allow 50% overflow
@@ -839,7 +830,6 @@ class Mercator(Projection):
                                        np.array([min_latitude, max_latitude]))
         self._xlimits = tuple(limits[..., 0])
         self._ylimits = tuple(limits[..., 1])
-        self._threshold = np.diff(self.x_limits)[0] / 720
 
     def __eq__(self, other):
         res = super(Mercator, self).__eq__(other)
@@ -853,10 +843,6 @@ class Mercator(Projection):
 
     def __hash__(self):
         return hash((self.proj4_init, self._xlimits, self._ylimits))
-
-    @property
-    def threshold(self):
-        return self._threshold
 
     @property
     def boundary(self):
@@ -889,10 +875,6 @@ class LambertCylindrical(_RectangularProjection):
         globe = Globe(semimajor_axis=math.degrees(1))
         super(LambertCylindrical, self).__init__(proj4_params, 180,
                                                  math.degrees(1), globe=globe)
-
-    @property
-    def threshold(self):
-        return 0.5
 
 
 class LambertConformal(Projection):
@@ -976,10 +958,6 @@ class LambertConformal(Projection):
         return self._boundary
 
     @property
-    def threshold(self):
-        return 1e5
-
-    @property
     def x_limits(self):
         return self._x_limits
 
@@ -995,10 +973,6 @@ class Miller(_RectangularProjection):
         # XXX How can we derive the vertical limit of 131.98?
         super(Miller, self).__init__(proj4_params, 180, 131.98, globe=globe)
 
-    @property
-    def threshold(self):
-        return 0.5
-
 
 class RotatedPole(_CylindricalProjection):
     def __init__(self, pole_longitude=0.0, pole_latitude=90.0, globe=None):
@@ -1007,10 +981,6 @@ class RotatedPole(_CylindricalProjection):
                         ('lon_0', 180 + pole_longitude),
                         ('to_meter', math.radians(1))]
         super(RotatedPole, self).__init__(proj4_params, 180, 90, globe=globe)
-
-    @property
-    def threshold(self):
-        return 0.5
 
 
 class Gnomonic(Projection):
@@ -1022,10 +992,6 @@ class Gnomonic(Projection):
     @property
     def boundary(self):
         return sgeom.Point(0, 0).buffer(self._max).exterior
-
-    @property
-    def threshold(self):
-        return 1e5
 
     @property
     def x_limits(self):
@@ -1076,15 +1042,10 @@ class Stereographic(Projection):
                              false_easting, false_northing, 90)
             coords = tuple(tuple(pair) for pair in coords.T)
             self._boundary = sgeom.polygon.LinearRing(coords)
-        self._threshold = np.diff(self._x_limits)[0] * 1e-3
 
     @property
     def boundary(self):
         return self._boundary
-
-    @property
-    def threshold(self):
-        return self._threshold
 
     @property
     def x_limits(self):
@@ -1120,10 +1081,6 @@ class Orthographic(Projection):
     @property
     def boundary(self):
         return sgeom.Point(0, 0).buffer(self._max).exterior
-
-    @property
-    def threshold(self):
-        return 1e5
 
     @property
     def x_limits(self):
@@ -1182,10 +1139,6 @@ class Mollweide(_WarpedRectangularProjection):
         super(Mollweide, self).__init__(proj4_params, central_longitude,
                                         globe=globe)
 
-    @property
-    def threshold(self):
-        return 1e5
-
 
 class Robinson(_WarpedRectangularProjection):
     def __init__(self, central_longitude=0, globe=None):
@@ -1209,10 +1162,6 @@ class Robinson(_WarpedRectangularProjection):
         proj4_params = [('proj', 'robin'), ('lon_0', central_longitude)]
         super(Robinson, self).__init__(proj4_params, central_longitude,
                                        globe=globe)
-
-    @property
-    def threshold(self):
-        return 1e4
 
     def transform_point(self, x, y, src_crs):
         """
@@ -1330,10 +1279,6 @@ class InterruptedGoodeHomolosine(Projection):
         return self._boundary
 
     @property
-    def threshold(self):
-        return 2e4
-
-    @property
     def x_limits(self):
         return self._x_limits
 
@@ -1372,15 +1317,10 @@ class Geostationary(Projection):
         self._boundary = sgeom.polygon.LinearRing(coords)
         self._xlim = self._boundary.bounds[::2]
         self._ylim = self._boundary.bounds[1::2]
-        self._threshold = np.diff(self._xlim)[0] * 0.02
 
     @property
     def boundary(self):
         return self._boundary
-
-    @property
-    def threshold(self):
-        return self._threshold
 
     @property
     def x_limits(self):
