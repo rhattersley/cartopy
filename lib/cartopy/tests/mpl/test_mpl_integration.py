@@ -253,7 +253,7 @@ def test_pcolormesh_global_with_wrap2():
     ax.set_global()  # make sure everything is visible
 
 
-@ImageTesting(['pcolormesh_global_wrap3'])
+@ImageTesting(['pcolormesh_global_wrap3'], tolerance=0.135)
 def test_pcolormesh_global_with_wrap3():
     nx, ny = 33, 17
     xbnds = np.linspace(-1.875, 358.125, nx, endpoint=True)

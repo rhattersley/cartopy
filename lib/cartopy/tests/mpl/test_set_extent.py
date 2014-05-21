@@ -37,7 +37,7 @@ def test_extents():
     # enable to see what is going on (and to make sure it is a plot of the uk)
     # ax.coastlines()
     assert_array_almost_equal(ax.viewLim.get_points(),
-                              np.array([[-12.5, 49.], [4., 60.]]))
+                              np.array([[-12.5, 49.], [4., 60.2491627]]))
 
     ax = plt.axes(projection=ccrs.NorthPolarStereo())
     ax.set_extent(uk, crs=uk_crs)
@@ -57,7 +57,7 @@ def test_extents():
     # ax.coastlines()
     assert_array_almost_equal(ax.viewLim.get_points(),
                               np.array([[-17.17698577, 48.21879707],
-                                        [5.68924381, 60.54218893]])
+                                        [5.68924381, 60.62992408]])
                               )
 
 
